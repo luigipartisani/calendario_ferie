@@ -1,0 +1,25 @@
+# Ambiente virtuale
+.venv/
+venv/
+
+# Variabili d'ambiente
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# macOS
+.DS_Store
+__MACOSX/
+
+# Streamlit
+.streamlit/
+
+# IDE
+.vscode/
+.idea/
+*.iml
