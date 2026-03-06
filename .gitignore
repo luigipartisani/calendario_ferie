@@ -19,6 +19,9 @@ __MACOSX/
 # Streamlit
 .streamlit/
 
+# Docker
+.dockerignore
+
 # IDE
 .vscode/
 .idea/
