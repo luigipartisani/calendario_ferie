@@ -20,7 +20,7 @@ st.set_page_config(
 
 st.markdown("""
     <style>
-        .block-container { padding-left: 1rem; padding-right: 1rem; max-width: 100%; }
+        .block-container { padding-left: 1rem; padding-right: 1rem; padding-top: 1rem; max-width: 100%; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -50,10 +50,10 @@ def main():
     if not available_years:
         st.warning("Nessuna variabile `JIRA_PERMITS_ISSUE_YYYY` trovata nel file `.env`.")
         st.stop()
-    selected_year = st.sidebar.selectbox("Seleziona anno", available_years)
+    selected_year = st.sidebar.selectbox("Anno", available_years)
     st.title(f"📅 Calendario ferie/permessi {selected_year}")
-    show_permessi = st.sidebar.toggle("Mostra `Permessi Speciali`", value=True)
-    if st.sidebar.button("🔄 Refresh dati"):
+    show_permessi = st.sidebar.toggle("Mostra 'Permessi speciali'", value=True)
+    if st.sidebar.button("🔄 Ricarica"):
         fetch_data.clear()
 
     try:
@@ -78,8 +78,8 @@ def main():
             (stats_permessi['user_name'].tolist() if not stats_permessi.empty else [])
         ))
         if "selected_users" not in st.session_state:
-            st.session_state["selected_users"] = all_users
-        selected_users = sorted(st.sidebar.multiselect("Filtra utenti", all_users, key="selected_users"))
+            st.session_state["selected_users"] = []
+        selected_users = sorted(st.sidebar.multiselect("Utenti", all_users, key="selected_users", placeholder="Nessuno"))
 
         month_names = MESI_ITALIANI
 
@@ -95,7 +95,7 @@ def main():
                 grid_f = grid_f.loc[grid_f.index.isin(selected_users)]
             if not grid_p.empty:
                 grid_p = grid_p.loc[grid_p.index.isin(selected_users)]
-            render_calendar_month(month_name, grid_f, grid_p, stats_ferie, show_legend=show_legend)
+            render_calendar_month(month_name, grid_f, grid_p, stats_ferie, year=selected_year, show_legend=show_legend)
 
         with tab_mesi:
             month_tabs = st.tabs(month_names)
@@ -104,7 +104,7 @@ def main():
                     render_month(month_name)
 
         with tab_anno:
-            st.caption("🔵 Ferie/Permessi   🟠 Permessi Speciali   🟣 Entrambi")
+            st.caption("🔵 Ferie/Permessi   🟠 Permessi Speciali   🟣 Entrambi   🔴 Sabato/Domenica/Festivo")
             for month_name in month_names:
                 render_month(month_name, show_legend=False)
 
