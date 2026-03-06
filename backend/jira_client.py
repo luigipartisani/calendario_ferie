@@ -47,6 +47,20 @@ class JiraLeaveClient:
             
         return pd.DataFrame(leave_data)
 
+    def get_project_members(self, project_key):
+        """
+        Returns the display names of users belonging to any role in the project.
+        """
+        members = set()
+        roles = self.jira.project_roles(project_key)
+        for role_name, role_info in roles.items():
+            role_id = role_info['id']
+            role = self.jira.project_role(project_key, role_id)
+            for actor in getattr(role, 'actors', []):
+                if actor.type == 'atlassian-user-role-actor':
+                    members.add(actor.displayName)
+        return sorted(members)
+
     def get_worklogs(self, issue_key):
         """
         Fetches worklogs for a specific leave issue.

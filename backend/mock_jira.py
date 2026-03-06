@@ -35,6 +35,9 @@ class MockJiraClient:
             })
         return pd.DataFrame(logs)
 
+    def get_project_members(self, project_key):
+        return self.users
+
     def get_team_leave_stats(self, year, parent_issue_key=None):
         df_issues = self.get_leave_issues(year)
         all_logs = []

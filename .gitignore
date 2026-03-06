@@ -26,3 +26,7 @@ __MACOSX/
 .vscode/
 .idea/
 *.iml
+
+# analisi
+.analisi/
+.analisi.md

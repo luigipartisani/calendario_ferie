@@ -8,6 +8,7 @@ from backend.jira_client import JiraLeaveClient
 from backend.mock_jira import MockJiraClient
 from backend.data_processor import DataProcessor, MESI_ITALIANI
 from frontend.components import render_calendar_month, render_summary_grid
+from backend.exporter import generate_xlsx
 
 # Load environment variables
 load_dotenv()
@@ -23,6 +24,15 @@ st.markdown("""
         .block-container { padding-left: 1rem; padding-right: 1rem; padding-top: 1rem; max-width: 100%; }
     </style>
 """, unsafe_allow_html=True)
+
+@st.cache_data(ttl=3600)
+def fetch_project_members(project_key):
+    use_mock = os.getenv("JIRA_USE_MOCK", "false").lower().strip("'").strip('"') == "true"
+    if not os.getenv("JIRA_API_TOKEN") or use_mock:
+        client = MockJiraClient()
+    else:
+        client = JiraLeaveClient()
+    return client.get_project_members(project_key)
 
 @st.cache_data(ttl=3600)  # Cache for 1 hour
 def fetch_data(year, parent_issue, special_parent):
@@ -42,7 +52,7 @@ def main():
         st.warning("Jira API Token not found. Please check your `.env` file or set JIRA_USE_MOCK=true.")
         st.stop()
 
-    st.sidebar.header("Configurazione")
+    st.sidebar.header("Impostazioni")
     available_years = sorted(
         [int(k.split("_")[-1]) for k in os.environ if k.startswith("JIRA_PERMITS_ISSUE_") and k.split("_")[-1].isdigit()],
         reverse=True
@@ -55,6 +65,7 @@ def main():
     show_permessi = st.sidebar.toggle("Mostra 'Permessi speciali'", value=True)
     if st.sidebar.button("🔄 Ricarica"):
         fetch_data.clear()
+    st.sidebar.markdown("---")
 
     try:
         with st.spinner("Caricamento dati da Jira..."):
@@ -77,13 +88,32 @@ def main():
             (stats_ferie['user_name'].tolist() if not stats_ferie.empty else []) +
             (stats_permessi['user_name'].tolist() if not stats_permessi.empty else [])
         ))
+
+        project_key = st.query_params.get("project_key")
+        if project_key:
+            project_members = fetch_project_members(project_key)
+            all_users = [u for u in all_users if u in project_members]
+
+        if st.session_state.get("_project_key") != project_key:
+            st.session_state["_project_key"] = project_key
+            st.session_state.pop("selected_users", None)
+
         if "selected_users" not in st.session_state:
-            st.session_state["selected_users"] = []
+            st.session_state["selected_users"] = all_users if project_key else []
         selected_users = sorted(st.sidebar.multiselect("Utenti", all_users, key="selected_users", placeholder="Nessuno"))
 
         month_names = MESI_ITALIANI
 
         render_summary_grid(grids_ferie, grids_permessi, stats_ferie, stats_permessi, selected_users, month_names)
+
+        if selected_users:
+            xlsx_data = generate_xlsx(selected_year, grids_ferie, selected_users)
+            st.sidebar.download_button(
+                label="📥 Esporta xlsx",
+                data=xlsx_data,
+                file_name=f"ferie_{selected_year}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
 
         st.divider()
         tab_mesi, tab_anno = st.tabs(["Mesi", "Anno completo"])
@@ -98,10 +128,11 @@ def main():
             render_calendar_month(month_name, grid_f, grid_p, stats_ferie, year=selected_year, show_legend=show_legend)
 
         with tab_mesi:
+            st.caption("🔵 Ferie/Permessi   🟠 Permessi Speciali   🟣 Entrambi   🔴 Sabato/Domenica/Festivo")
             month_tabs = st.tabs(month_names)
             for i, month_name in enumerate(month_names):
                 with month_tabs[i]:
-                    render_month(month_name)
+                    render_month(month_name, show_legend=False)
 
         with tab_anno:
             st.caption("🔵 Ferie/Permessi   🟠 Permessi Speciali   🟣 Entrambi   🔴 Sabato/Domenica/Festivo")
