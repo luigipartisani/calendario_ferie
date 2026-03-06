@@ -99,7 +99,7 @@ def main():
             try:
                 team_list = json.loads(team_config_raw)
                 project_emails = next(
-                    (entry["users"] for entry in team_list if entry["project_key"] == project_key),
+                    (entry["users"] for entry in team_list if entry["project_key"].upper() == project_key.upper()),
                     None
                 )
                 if project_emails is None:
