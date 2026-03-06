@@ -1,6 +1,7 @@
 services:
   app:
-    build: .
+    build:
+      context: https://github.com/luigipartisani/calendario_ferie.git
     ports:
       - "8511:8511"
     env_file:

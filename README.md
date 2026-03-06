@@ -1,35 +1,51 @@
-# Holiday Calendar
+# Calendario Ferie/Permessi
 
-A centralized calendar for team leave/vacation visualization using Streamlit and Jira API.
+Applicazione web per la visualizzazione centralizzata delle ferie e dei permessi del team, basata su dati Jira.
 
-## Setup
+## Avvio in locale
 
-1. **Create a virtual environment:**
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   ```
+```bash
+python -m venv .venv
+.venv\Scripts\activate      # Windows
+# source .venv/bin/activate  # Linux/macOS
+pip install -r requirements.txt
+streamlit run app.py
+```
 
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+## Avvio con Docker
 
-3. **Configure environment variables:**
-   - Copy `.env.template` to `.env`
-   - Fill in your Jira credentials:
-     - `JIRA_URL`: Your Jira instance URL (e.g., https://your-domain.atlassian.net)
-     - `JIRA_EMAIL`: Your Jira account email
-     - `JIRA_API_TOKEN`: Your Jira API token
+```bash
+docker compose up --build
+```
 
-4. **Run the application:**
-   ```bash
-   streamlit run app.py
-   ```
+L'applicazione è disponibile su `http://localhost:8511`.
 
-## Requirements
-- Each team member has 12 rows (one for each month).
-- Each row has columns for each day of the month.
-- Grouping is by month.
-- Coloring based on leave duration.
-- Visual highlight for exceeding accrued hours.
+## Configurazione (.env)
+
+```env
+JIRA_URL=https://<istanza>.atlassian.net
+JIRA_EMAIL=utente@dominio.it
+JIRA_API_TOKEN=<token>
+JIRA_USE_MOCK=false
+
+# Per ogni anno aggiungere le due variabili corrispondenti:
+JIRA_PERMITS_ISSUE_2026=VAR-64
+JIRA_SPECIAL_PERMITS_ISSUE_2026=VAR-76
+
+# JIRA_PERMITS_ISSUE_2027=VAR-XX
+# JIRA_SPECIAL_PERMITS_ISSUE_2027=VAR-YY
+```
+
+La combo "Anno" mostra automaticamente solo gli anni per cui è definita la variabile `JIRA_PERMITS_ISSUE_YYYY`.
+
+## Filtro per progetto Jira
+
+Passando il parametro `project_key` nell'URL, l'app filtra gli utenti in base ai membri del progetto Jira indicato e li preseleziona automaticamente:
+
+```
+http://localhost:8511/?project_key=ADI
+```
+
+## Modalità mock
+
+Impostare `JIRA_USE_MOCK=true` nel `.env` per usare dati di test senza credenziali Jira reali.
