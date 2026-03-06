@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import os
+import json
 from dotenv import load_dotenv
 
 from backend.jira_client import JiraLeaveClient
@@ -10,8 +11,6 @@ from backend.data_processor import DataProcessor, MESI_ITALIANI
 from frontend.components import render_calendar_month, render_summary_grid
 from backend.exporter import generate_xlsx
 
-# Load environment variables
-load_dotenv()
 
 st.set_page_config(
     page_title="Calendario ferie/permessi",
@@ -26,13 +25,13 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 @st.cache_data(ttl=3600)
-def fetch_project_members(project_key):
+def fetch_email_to_name(emails_tuple):
     use_mock = os.getenv("JIRA_USE_MOCK", "false").lower().strip("'").strip('"') == "true"
     if not os.getenv("JIRA_API_TOKEN") or use_mock:
         client = MockJiraClient()
     else:
         client = JiraLeaveClient()
-    return client.get_project_members(project_key)
+    return client.resolve_emails_to_names(list(emails_tuple))
 
 @st.cache_data(ttl=3600)  # Cache for 1 hour
 def fetch_data(year, parent_issue, special_parent):
@@ -46,6 +45,7 @@ def fetch_data(year, parent_issue, special_parent):
     return df_ferie, df_permessi
 
 def main():
+    load_dotenv(override=True)
     # Check for credentials or mock mode
     use_mock = os.getenv("JIRA_USE_MOCK", "false").lower().strip("'").strip('"') == "true"
     if not os.getenv("JIRA_API_TOKEN") and not use_mock:
@@ -65,6 +65,7 @@ def main():
     show_permessi = st.sidebar.toggle("Mostra 'Permessi speciali'", value=True)
     if st.sidebar.button("🔄 Ricarica"):
         fetch_data.clear()
+        fetch_email_to_name.clear()
     st.sidebar.markdown("---")
 
     try:
@@ -91,8 +92,25 @@ def main():
 
         project_key = st.query_params.get("project_key")
         if project_key:
-            project_members = fetch_project_members(project_key)
-            all_users = [u for u in all_users if u in project_members]
+            team_config_raw = os.getenv("TEAM_PROJECT_KEY")
+            if not team_config_raw:
+                st.error(f"Variabile `TEAM_PROJECT_KEY` non configurata nel file `.env`.")
+                st.stop()
+            try:
+                team_list = json.loads(team_config_raw)
+                project_emails = next(
+                    (entry["users"] for entry in team_list if entry["project_key"] == project_key),
+                    None
+                )
+                if project_emails is None:
+                    st.error(f"Progetto `{project_key}` non trovato in `TEAM_PROJECT_KEY`.")
+                    st.stop()
+                email_to_name = fetch_email_to_name(tuple(sorted(project_emails)))
+                allowed = {email_to_name[e] for e in project_emails if e in email_to_name}
+                all_users = [u for u in all_users if u in allowed]
+            except json.JSONDecodeError:
+                st.error("Formato non valido per la variabile `TEAM_PROJECT_KEY`. Verificare che sia un JSON corretto.")
+                st.stop()
 
         if st.session_state.get("_project_key") != project_key:
             st.session_state["_project_key"] = project_key

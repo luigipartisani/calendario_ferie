@@ -32,20 +32,33 @@ class JiraLeaveClient:
                 continue
             assignee = issue.fields.assignee.displayName
             user_id = issue.fields.assignee.accountId
-            
+            user_email = getattr(issue.fields.assignee, 'emailAddress', '') or ''
+
             # Accrued hours (Original Estimate in seconds)
             accrued_seconds = getattr(issue.fields, 'timeoriginalestimate', 0) or 0
             accrued_hours = accrued_seconds / 3600
-            
+
             leave_data.append({
                 'issue_key': issue.key,
                 'user_name': assignee,
                 'user_id': user_id,
+                'user_email': user_email,
                 'accrued_hours': accrued_hours,
                 'summary': issue.fields.summary
             })
             
         return pd.DataFrame(leave_data)
+
+    def resolve_emails_to_names(self, emails):
+        mapping = {}
+        for email in emails:
+            try:
+                users = self.jira.search_users(query=email, maxResults=1)
+                if users:
+                    mapping[email] = users[0].displayName
+            except Exception:
+                pass
+        return mapping
 
     def get_project_members(self, project_key):
         """
@@ -88,13 +101,13 @@ class JiraLeaveClient:
             logs = self.get_worklogs(row['issue_key'])
             if not logs.empty:
                 logs['user_name'] = row['user_name']
+                logs['user_email'] = row['user_email']
                 logs['accrued_hours'] = row['accrued_hours']
                 all_logs.append(logs)
             else:
-                # Still add a dummy row for accrued hours if we want to show the user in stats
-                # even if they have 0 logs
                 all_logs.append(pd.DataFrame({
                     'user_name': [row['user_name']],
+                    'user_email': [row['user_email']],
                     'accrued_hours': [row['accrued_hours']],
                     'hours': [0.0],
                     'date': [pd.NaT],

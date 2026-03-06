@@ -5,3 +5,4 @@ JIRA_EMAIL=
 JIRA_PERMITS_ISSUE_2026=
 JIRA_SPECIAL_PERMITS_ISSUE_2026=
 # Per aggiungere un nuovo anno: JIRA_PERMITS_ISSUE_2027=VAR-XX e JIRA_SPECIAL_PERMITS_ISSUE_2027=VAR-YY
+TEAM_PROJECT_KEY=[{"project_key":"PRJ1","users":["user1@email.it","user2@email.it"]},{"project_key":"PRJ2","users":["user3@email.it"]}]

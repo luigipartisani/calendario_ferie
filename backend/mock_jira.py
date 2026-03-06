@@ -9,12 +9,12 @@ class MockJiraClient:
     def get_leave_issues(self, year):
         data = []
         for i, user in enumerate(self.users):
-            # Accrued hours: 160, 180, 200, 150
             accrued = [160, 180, 200, 150][i]
             data.append({
                 'issue_key': f'LEAVE-{i}',
                 'user_name': user,
                 'user_id': f'acc-{i}',
+                'user_email': f'user{i}@example.com',
                 'accrued_hours': accrued,
                 'summary': f'Leave for {user} - {year}'
             })
@@ -35,6 +35,9 @@ class MockJiraClient:
             })
         return pd.DataFrame(logs)
 
+    def resolve_emails_to_names(self, emails):
+        return {e: e for e in emails}
+
     def get_project_members(self, project_key):
         return self.users
 
@@ -45,6 +48,7 @@ class MockJiraClient:
         for _, row in df_issues.iterrows():
             logs = self.get_worklogs(row['issue_key'], year=year)
             logs['user_name'] = row['user_name']
+            logs['user_email'] = row['user_email']
             logs['accrued_hours'] = row['accrued_hours']
             all_logs.append(logs)
             
